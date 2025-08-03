@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spaldellino - Italian Card Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Main Menu -->
+        <div id="main-menu" class="screen active">
+            <div class="container">
+                <h1 class="game-title">Spaldellino</h1>
+                <p class="game-subtitle">Italian Card Game</p>
+                
+                <div class="menu-buttons">
+                    <button id="create-game-btn" class="btn btn-primary">Create Game</button>
+                    <button id="join-game-btn" class="btn btn-secondary">Join Game</button>
+                </div>
+                
+                <div class="game-rules">
+                    <h3>How to Play</h3>
+                    <ul>
+                        <li>2-8 players using Italian deck (40 cards)</li>
+                        <li>Each player starts with 5 lives</li>
+                        <li>Phases: 2, 3, 4, 5, 4, 3 cards (repeating)</li>
+                        <li>Guess how many turns you'll win each phase</li>
+                        <li>Wrong guess = lose 1 life</li>
+                        <li>Last player standing wins!</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Game Screen -->
+        <div id="create-game-screen" class="screen">
+            <div class="container">
+                <h2>Create New Game</h2>
+                <div class="form-group">
+                    <label for="player-name">Your Name:</label>
+                    <input type="text" id="player-name" placeholder="Enter your name" maxlength="20">
+                </div>
+                <div class="form-buttons">
+                    <button id="create-confirm-btn" class="btn btn-primary">Create Game</button>
+                    <button id="back-to-menu-btn" class="btn btn-secondary">Back</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Join Game Screen -->
+        <div id="join-game-screen" class="screen">
+            <div class="container">
+                <h2>Join Game</h2>
+                <div class="form-group">
+                    <label for="join-player-name">Your Name:</label>
+                    <input type="text" id="join-player-name" placeholder="Enter your name" maxlength="20">
+                </div>
+                <div class="form-group">
+                    <label for="game-id">Game ID:</label>
+                    <input type="text" id="game-id" placeholder="Enter game ID">
+                </div>
+                <div class="form-buttons">
+                    <button id="join-confirm-btn" class="btn btn-primary">Join Game</button>
+                    <button id="back-to-menu-join-btn" class="btn btn-secondary">Back</button>
+                </div>
+                
+                <div id="available-games">
+                    <h3>Available Games</h3>
+                    <div id="games-list">
+                        <!-- Games will be populated here -->
+                    </div>
+                    <button id="refresh-games-btn" class="btn btn-small">Refresh</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Lobby Screen -->
+        <div id="game-lobby-screen" class="screen">
+            <div class="container">
+                <h2>Game Lobby</h2>
+                <div class="game-info">
+                    <p><strong>Game ID:</strong> <span id="lobby-game-id"></span></p>
+                    <button id="copy-game-id-btn" class="btn btn-small">Copy ID</button>
+                </div>
+                
+                <div class="players-list">
+                    <h3>Players</h3>
+                    <div id="lobby-players">
+                        <!-- Players will be populated here -->
+                    </div>
+                </div>
+                
+                <div class="lobby-buttons">
+                    <button id="start-game-btn" class="btn btn-primary">Start Game</button>
+                    <button id="leave-game-btn" class="btn btn-secondary">Leave Game</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div class="container">
+                <!-- Game Header -->
+                <div class="game-header">
+                    <div class="phase-info">
+                        <span class="phase-label">Phase:</span>
+                        <span id="current-phase">1</span>
+                        <span class="cards-info">(<span id="cards-in-phase">2</span> cards)</span>
+                    </div>
+                    <div class="turn-info">
+                        <span class="turn-label">Turn:</span>
+                        <span id="current-turn">1</span>
+                    </div>
+                </div>
+
+                <!-- Players Status -->
+                <div class="players-status">
+                    <div id="players-info">
+                        <!-- Player info will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Game Area -->
+                <div class="game-area">
+                    <!-- Guessing Phase -->
+                    <div id="guessing-phase" class="game-phase">
+                        <h3>Make Your Guess</h3>
+                        <p>How many turns do you think you'll win this phase?</p>
+                        <div class="guess-controls">
+                            <div class="guess-buttons" id="guess-buttons">
+                                <!-- Guess buttons will be generated here -->
+                            </div>
+                        </div>
+                        <div id="other-guesses">
+                            <!-- Other players' guesses will be shown here -->
+                        </div>
+                    </div>
+
+                    <!-- Playing Phase -->
+                    <div id="playing-phase" class="game-phase">
+                        <div class="current-player-info">
+                            <p id="current-player-text">Waiting for players...</p>
+                        </div>
+                        
+                        <!-- Played Cards Area -->
+                        <div class="played-cards">
+                            <h4>Cards Played This Turn</h4>
+                            <div id="played-cards-area">
+                                <!-- Played cards will be shown here -->
+                            </div>
+                        </div>
+
+                        <!-- Player's Hand -->
+                        <div class="player-hand">
+                            <h4>Your Cards</h4>
+                            <div id="hand-cards">
+                                <!-- Player's cards will be shown here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phase End -->
+                    <div id="phase-end" class="game-phase">
+                        <h3>Phase Results</h3>
+                        <div id="phase-results">
+                            <!-- Phase results will be shown here -->
+                        </div>
+                        <button id="continue-btn" class="btn btn-primary">Continue</button>
+                    </div>
+
+                    <!-- Game Over -->
+                    <div id="game-over" class="game-phase">
+                        <h3>Game Over!</h3>
+                        <div id="game-results">
+                            <!-- Game results will be shown here -->
+                        </div>
+                        <button id="new-game-btn" class="btn btn-primary">New Game</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="screen">
+            <div class="container">
+                <div class="loading-spinner"></div>
+                <p>Loading...</p>
+            </div>
+        </div>
+
+        <!-- Error Modal -->
+        <div id="error-modal" class="modal">
+            <div class="modal-content">
+                <h3>Error</h3>
+                <p id="error-message"></p>
+                <button id="error-ok-btn" class="btn btn-primary">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+

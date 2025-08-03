@@ -90,7 +90,7 @@ spaldellino_game/
 ## Deployment
 
 The application is deployed and accessible at:
-**https://ogh5izc8mn6p.manus.space**
+**https://bfe452647979.ngrok-free.app**
 
 ### Latest Features (v2.2) - Final Bug Fix
 - **Correctly Fixed Guessing Constraints**: Now properly enforces that NO player (except the first) can make a guess that would cause the total to equal the number of cards in the phase

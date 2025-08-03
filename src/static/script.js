@@ -5,7 +5,11 @@ let gameState = {
     playerName: null,
     currentScreen: 'main-menu',
     showingTurnResult: false,
-    lastTurnResult: null
+    lastTurnResult: null,
+    showingPhaseResult: false,
+    lastPhaseIndex: null,
+    pendingPhaseResult: null,
+    lastPhaseEndData: null
 };
 
 // API base URL
@@ -247,6 +251,12 @@ function updateGameScreen(game) {
         return;
     }
     
+    // Check if we should show phase end result
+    if (shouldShowPhaseResult(game)) {
+        showPhaseEndSequence(game);
+        return;
+    }
+    
     // Update phase info
     document.getElementById('current-phase').textContent = game.current_phase_index + 1;
     document.getElementById('cards-in-phase').textContent = game.cards_in_current_phase;
@@ -260,25 +270,61 @@ function updateGameScreen(game) {
 }
 
 function shouldShowTurnResult(game) {
-    // Show turn result if:
-    // 1. We're in playing phase
-    // 2. No cards are currently played (turn just finished)
-    // 3. We have turn results
-    // 4. We're not already showing a turn result
-    // 5. The last turn result is different from what we last showed
-    
-    if (game.phase !== 'playing' || gameState.showingTurnResult) {
+    // Show turn result if we're not already showing one and we have a new turn result
+    if (gameState.showingTurnResult) {
         return false;
     }
     
     const hasNewTurnResult = game.turn_results.length > 0 && 
-                            game.played_cards.length === 0 &&
                             game.turn_results[game.turn_results.length - 1] !== gameState.lastTurnResult;
     
-    return hasNewTurnResult;
+    // Show for regular turns in playing phase (when cards are cleared)
+    if (game.phase === 'playing' && game.played_cards.length === 0 && hasNewTurnResult) {
+        return true;
+    }
+    
+    // Show for final turn when entering phase_end
+    if (game.phase === 'phase_end' && hasNewTurnResult) {
+        return true;
+    }
+    
+    return false;
 }
 
-function showTurnResult(game) {
+function shouldShowPhaseResult(game) {
+    // Show phase result if we're in phase_end and haven't shown it yet
+    if (gameState.showingPhaseResult || gameState.showingTurnResult) {
+        return false;
+    }
+    
+    // Check if we're in phase_end and this is a new phase end
+    const isNewPhaseEnd = game.phase === 'phase_end' && 
+                         (!gameState.lastPhaseEndData || 
+                          gameState.lastPhaseEndData.current_phase_index !== game.current_phase_index);
+    
+    return isNewPhaseEnd;
+}
+
+function showPhaseEndSequence(game) {
+    gameState.lastPhaseEndData = {
+        current_phase_index: game.current_phase_index,
+        players: JSON.parse(JSON.stringify(game.players)) // Deep copy for comparison
+    };
+    
+    // Check if there's a final turn result to show first
+    if (game.turn_results.length > 0 && 
+        game.turn_results[game.turn_results.length - 1] !== gameState.lastTurnResult) {
+        
+        // Store phase result data to show after turn result
+        gameState.pendingPhaseResult = game;
+        showTurnResult(game, true);
+    } else {
+        // Show phase result directly
+        showPhaseResult(game);
+    }
+}
+
+function showTurnResult(game, isPhaseEndTurn = false) {
     gameState.showingTurnResult = true;
     const lastTurnIndex = game.turn_results.length - 1;
     const winnerPlayerId = game.turn_results[lastTurnIndex];
@@ -286,17 +332,85 @@ function showTurnResult(game) {
     
     gameState.lastTurnResult = winnerPlayerId;
     
-    // Create turn result overlay
+    // Create turn result banner (not full overlay, so cards remain visible)
+    const banner = document.createElement('div');
+    banner.className = 'turn-result-banner';
+    banner.innerHTML = `
+        <div class="turn-result-message">
+            <span class="winner-name">${winner ? winner.name : 'Unknown'}</span>
+            <span class="takes-hand">takes the hand!</span>
+        </div>
+        <div class="turn-result-timer">
+            <div class="timer-bar"></div>
+        </div>
+    `;
+    
+    document.body.appendChild(banner);
+    
+    // Animate the timer bar
+    const timerBar = banner.querySelector('.timer-bar');
+    timerBar.style.animation = 'timer-countdown 3s linear';
+    
+    // Remove banner after 3 seconds
+    setTimeout(() => {
+        document.body.removeChild(banner);
+        gameState.showingTurnResult = false;
+        
+        // If this was the last turn of a phase, show phase results next
+        if (isPhaseEndTurn && gameState.pendingPhaseResult) {
+            showPhaseResult(gameState.pendingPhaseResult);
+            gameState.pendingPhaseResult = null;
+        } else {
+            // Update the game screen normally
+            updateGameScreenNormal(game);
+        }
+    }, 3000);
+}
+
+function showPhaseResult(game) {
+    gameState.showingPhaseResult = true;
+    
+    // Find players who lost lives in this phase by comparing guess vs actual wins
+    const playersWhoLost = [];
+    const eliminatedPlayers = [];
+    
+    game.players.forEach(player => {
+        if (player.is_eliminated) {
+            eliminatedPlayers.push(player);
+        } else if (player.guess !== null && player.guess !== player.turns_won) {
+            // Player lost if their guess didn't match their actual wins
+            playersWhoLost.push(player);
+        }
+    });
+    
+    // Create phase result overlay
     const overlay = document.createElement('div');
-    overlay.className = 'turn-result-overlay';
+    overlay.className = 'phase-result-overlay';
+    
+    let resultMessage = '';
+    let resultDetails = '';
+    
+    if (eliminatedPlayers.length > 0) {
+        const eliminatedNames = eliminatedPlayers.map(p => p.name).join(', ');
+        resultMessage = 'Players Eliminated!';
+        resultDetails = `${eliminatedNames} ${eliminatedPlayers.length === 1 ? 'has' : 'have'} been eliminated from the game!`;
+    } else if (playersWhoLost.length > 0) {
+        const loserNames = playersWhoLost.map(p => p.name).join(', ');
+        resultMessage = 'Phase Complete!';
+        resultDetails = `${loserNames} ${playersWhoLost.length === 1 ? 'lost a life' : 'lost lives'} this phase!`;
+    } else {
+        resultMessage = 'Phase Complete!';
+        resultDetails = 'All players guessed correctly!';
+    }
+    
     overlay.innerHTML = `
-        <div class="turn-result-content">
-            <h3>Turn ${lastTurnIndex + 1} Winner!</h3>
-            <div class="winner-info">
-                <div class="winner-name">${winner ? winner.name : 'Unknown'}</div>
-                <div class="winner-message">won this turn!</div>
+        <div class="phase-result-content">
+            <h3>${resultMessage}</h3>
+            <div class="phase-info">
+                <div class="phase-message">${resultDetails}</div>
+                <div class="phase-number">Phase ${game.current_phase_index + 1} Results</div>
             </div>
-            <div class="turn-result-timer">
+            <div class="phase-result-timer">
                 <div class="timer-bar"></div>
             </div>
         </div>
@@ -306,19 +420,22 @@ function showTurnResult(game) {
     
     // Animate the timer bar
     const timerBar = overlay.querySelector('.timer-bar');
-    timerBar.style.animation = 'timer-countdown 3s linear';
+    timerBar.style.animation = 'timer-countdown 4s linear';
     
-    // Remove overlay after 3 seconds
+    // Remove overlay after 4 seconds
     setTimeout(() => {
         document.body.removeChild(overlay);
-        gameState.showingTurnResult = false;
+        gameState.showingPhaseResult = false;
         
         // Update the game screen normally
         updateGameScreenNormal(game);
-    }, 3000);
+    }, 4000);
 }
 
 function updateGameScreenNormal(game) {
+    // Track phase changes for phase result overlay
+    gameState.lastPhaseIndex = game.current_phase_index;
+    
     // Update phase info
     document.getElementById('current-phase').textContent = game.current_phase_index + 1;
     document.getElementById('cards-in-phase').textContent = game.cards_in_current_phase;
@@ -784,4 +901,3 @@ function stopGameStatePolling() {
         pollingInterval = null;
     }
 }
-
